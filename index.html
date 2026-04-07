@@ -1,0 +1,398 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance System</title>
+    <link rel="icon" href="data:,">
+    
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+    <script>
+        (function() {
+            // Your Public Key
+            emailjs.init("KDVtdm08DphYPRaof"); 
+        })();
+    </script>
+
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+        body{background:linear-gradient(135deg,#0f172a,#020617);color:#e2e8f0; min-height: 100vh;}
+        .container{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:30px;}
+        .card-box{width:100%;max-width:520px;padding:40px;border-radius:20px;background:rgba(30,41,59,0.85);backdrop-filter:blur(18px);box-shadow:0 25px 70px rgba(0,0,0,0.7);text-align:center;}
+        h1,h2{margin-bottom:20px;}
+        input,select,textarea{width:100%;padding:14px;margin:10px 0;border-radius:10px;border:1px solid #334155;background:#020617;color:white;outline:none;}
+        input:focus{border-color:#38bdf8;}
+        .btn{padding:12px;border:none;border-radius:12px;cursor:pointer;margin:6px;color:white; font-weight: bold;
+        background:linear-gradient(270deg,red,yellow,green,cyan,blue,magenta,red);
+        background-size:1400% 1400%;animation:rgbFlow 6s linear infinite;}
+        .btn.small{padding:6px 10px;font-size:12px;}
+        @keyframes rgbFlow{
+            0%{background-position:0% 50%;}
+            50%{background-position:100% 50%;}
+            100%{background-position:0% 50%;}
+        }
+        .dashboard{display:none;max-width:1100px;margin:auto;padding:20px;}
+        .card{background:rgba(30,41,59,0.8);padding:15px;margin-bottom:15px;border-radius:12px;}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;}
+        table{width:100%;border-collapse:collapse;}
+        th,td{padding:10px;text-align:center;border-bottom: 1px solid #334155;}
+        th{background:#1e293b;}
+        .safe{color:#22c55e;}
+        .short{color:#ef4444;}
+        .radio-group{display:flex;justify-content:center;gap:8px;}
+        .radio input{display:none;}
+        .radio{padding:5px 10px;border-radius:20px;border:1px solid #334155;cursor:pointer;font-size:13px;}
+        .radio.present{color:#22c55e;}
+        .radio.absent{color:#ef4444;}
+        .radio:has(input:checked){background:#020617;border:1px solid currentColor;}
+        .btn-row{display:flex;justify-content:center;gap:10px;margin-top:10px;}
+        .register-btn{display:block;margin:10px auto 0 auto;width:60%;background:transparent;border:1px solid #38bdf8;color:#38bdf8;animation:none;transition:0.3s;}
+        .register-btn:hover{background:#38bdf8;color:#020617;box-shadow:0 0 10px #38bdf8;}
+        #regStudent, #regFaculty {display:none;}
+        .status-box { border: 1px solid #334155; padding: 15px; border-radius: 12px; margin-bottom: 15px; background: rgba(15, 23, 42, 0.5); text-align: left; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="landingPage">
+    <div class="card-box">
+        <h1>Smart Attendance System</h1>
+        <button class="btn" onclick="openLogin('student')">Student Login</button>
+        <button class="btn" onclick="openLogin('faculty')">Faculty Login</button>
+    </div>
+</div>
+
+<div class="container" id="loginPage" style="display:none;">
+    <div class="card-box">
+        <h2 id="loginTitle">Login</h2>
+        <div id="facultyFields">
+            <input id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+        </div>
+        <div id="studentFields" style="display:none;">
+            <input id="usn" placeholder="USN">
+            <input type="password" id="stuPassword" placeholder="Password">
+        </div>
+        <p id="errorMsg" style="color:red;"></p>
+        <div class="btn-row">
+            <button class="btn" id="loginBtn" onclick="login()">Login</button>
+            <button class="btn" onclick="goBack()">Back</button>
+        </div>
+        <button class="btn register-btn" id="registerBtn" onclick="showRegister()" style="display:none;">Register</button>
+    </div>
+</div>
+
+<div class="container" id="registerPage" style="display:none;">
+    <div class="card-box">
+        <h2 id="regTitle">Register</h2>
+        
+        <div id="regForm">
+            <input id="regName" placeholder="Name">
+            <div id="regFaculty">
+                <input id="regEmail" placeholder="Email">
+            </div>
+            <div id="regStudent">
+                <input id="regUSN" placeholder="USN">
+                <input id="regStuEmail" placeholder="Student Email">
+            </div>
+            <input type="password" id="regPass" placeholder="Password">
+            <button class="btn" onclick="sendOTP()">Send Verification OTP</button>
+        </div>
+
+        <div id="otpSection" style="display:none;">
+            <p style="margin-bottom:10px;">Enter the 6-digit code sent to your email</p>
+            <input id="otpInput" placeholder="000000" style="text-align:center; letter-spacing: 5px; font-size: 1.5rem;">
+            <button class="btn" onclick="verifyOTPAndRegister()">Verify & Register</button>
+            <button class="btn" onclick="sendOTP()" style="background:#334155; animation:none;">Resend OTP</button>
+        </div>
+
+        <button class="btn" onclick="backToLogin()" style="background:#334155; animation:none; margin-top:15px;">Back</button>
+    </div>
+</div>
+
+<div class="dashboard" id="facultyDash">
+    <div class="card"><button class="btn" onclick="logout()">Logout</button></div>
+    <div class="grid">
+        <div class="card">Subject: <b id="subName">-</b></div>
+        <div class="card">Classes Taken: <b id="totalClass">0</b></div>
+    </div>
+    <div class="card">
+        <input type="date" id="date">
+        <select id="subject" onchange="updateSelectedSubject()">
+            <option>ADA</option><option>DBMS</option><option>DMS</option><option>MC</option><option>UHV</option>
+        </select>
+    </div>
+    <div class="card">
+        <button class="btn" onclick="markAll('Present')">All Present</button>
+        <button class="btn" onclick="markAll('Absent')">All Absent</button>
+        <button class="btn" onclick="submitAttendance()">Submit</button>
+        <button class="btn" onclick="checkShortage()">View Shortage</button>
+    </div>
+    <div class="card">
+        <table><thead><tr><th>USN</th><th>Name</th><th>Status</th></tr></thead><tbody id="table"></tbody></table>
+    </div>
+</div>
+
+<div class="dashboard" id="shortagePage">
+    <div class="card"><button class="btn" onclick="back()">Back to Dashboard</button></div>
+    <div class="card">
+        <h2>Attendance Shortage</h2>
+        <table><thead><tr><th>USN</th><th>%</th><th>Status</th><th>Request</th></tr></thead><tbody id="shortageTable"></tbody></table>
+    </div>
+</div>
+
+<div class="dashboard" id="requestPage">
+    <div class="card"><button class="btn" onclick="backToShortage()">Back to Shortage</button></div>
+    <div class="card">
+        <h2>Student Requests</h2>
+        <table><thead><tr><th>USN</th><th>Message</th><th>Action</th></tr></thead><tbody id="requestTable"></tbody></table>
+    </div>
+</div>
+
+<div class="dashboard" id="studentDash">
+    <div class="card"><button class="btn" onclick="logout()">Logout</button></div>
+    <div id="requestNotification"></div>
+    <div class="card">
+        <h2 id="stuUSN"></h2>
+        <select id="stuSubject" onchange="loadStudentAttendance()">
+            <option>ADA</option><option>DBMS</option><option>DMS</option><option>MC</option><option>UHV</option>
+        </select>
+        <h1 id="attendance"></h1>
+    </div>
+    <div class="card">
+        <textarea id="msg" placeholder="Request leave or explain absence..."></textarea>
+        <button class="btn" onclick="sendRequest()">Submit Request</button>
+    </div>
+</div>
+
+<script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    const supabaseClient = createClient(
+        "https://rzfigeqjokgmkoijpedf.supabase.co",
+        "sb_publishable_G-U_CK1C_nK0-I3OiY9qCg_SXtCAZei"
+    );
+    window.supabaseClient = supabaseClient; 
+    console.log("Supabase Loaded");
+</script>
+
+<script>
+    const landingPage = document.getElementById("landingPage");
+    const loginPage = document.getElementById("loginPage");
+    const registerPage = document.getElementById("registerPage");
+    const facultyDash = document.getElementById("facultyDash");
+    const studentDash = document.getElementById("studentDash");
+    const shortagePage = document.getElementById("shortagePage");
+    const requestPage = document.getElementById("requestPage");
+    
+    let currentUSN = "", currentRole = "", selectedUSN = "";
+    let generatedOTP = "", tempUser = {};
+
+    function openLogin(role){
+        currentRole = role;
+        landingPage.style.display = "none";
+        loginPage.style.display = "flex";
+        document.getElementById("loginTitle").innerText = role.charAt(0).toUpperCase() + role.slice(1) + " Login";
+        document.getElementById("facultyFields").style.display = role === "faculty" ? "block" : "none";
+        document.getElementById("studentFields").style.display = role === "student" ? "block" : "none";
+        document.getElementById("registerBtn").style.display = "none";
+        document.getElementById("errorMsg").innerText = "";
+    }
+
+    function goBack(){ loginPage.style.display = "none"; landingPage.style.display = "flex"; }
+    
+    function showRegister(){ 
+        loginPage.style.display = "none"; 
+        registerPage.style.display = "flex";
+        document.getElementById("regStudent").style.display = currentRole === "student" ? "block" : "none";
+        document.getElementById("regFaculty").style.display = currentRole === "faculty" ? "block" : "none";
+        document.getElementById("regForm").style.display = "block";
+        document.getElementById("otpSection").style.display = "none";
+    }
+
+    function backToLogin(){ registerPage.style.display = "none"; loginPage.style.display = "flex"; }
+
+    async function login(){
+        const err = document.getElementById("errorMsg");
+        err.innerText = "";
+        
+        try {
+            if(currentRole === "faculty"){
+                const emailVal = document.getElementById("email").value.trim();
+                const passVal = document.getElementById("password").value.trim();
+                let {data, error} = await window.supabaseClient.from("faculty").select("*").eq("email", emailVal).eq("password", passVal);
+                if(error || !data?.length) throw new Error("Invalid credentials");
+                loginPage.style.display = "none"; facultyDash.style.display = "block";
+                setTodayDate(); updateSelectedSubject(); loadStudents();
+            } else {
+                const usnVal = document.getElementById("usn").value.trim().toUpperCase();
+                const stuPassVal = document.getElementById("stuPassword").value.trim();
+                let {data, error} = await window.supabaseClient.from("students").select("*").eq("usn", usnVal).eq("password", stuPassVal);
+                if(error || !data?.length) throw new Error("Invalid credentials");
+                currentUSN = usnVal;
+                loginPage.style.display = "none"; studentDash.style.display = "block";
+                showStudent(currentUSN);
+            }
+        } catch(e) { 
+            err.innerText = e.message; 
+            document.getElementById("registerBtn").style.display = "block";
+        }
+    }
+
+    async function sendOTP() {
+        const name = document.getElementById("regName").value.trim();
+        const pass = document.getElementById("regPass").value.trim();
+        let email = "";
+
+        if (currentRole === 'faculty') {
+            email = document.getElementById("regEmail").value.trim();
+            tempUser = { name, email, password: pass };
+        } else {
+            const usn = document.getElementById("regUSN").value.trim().toUpperCase();
+            email = document.getElementById("regStuEmail").value.trim();
+            tempUser = { name, usn, email, password: pass };
+        }
+
+        if (!name || !pass || !email) return alert("Please fill all fields");
+
+        generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+
+        try {
+            await emailjs.send("service_imm3for", "template_677uzcg", {
+                user_name: name,
+                user_email: email,
+                otp: generatedOTP
+            });
+
+            alert("OTP sent successfully to " + email);
+            document.getElementById("regForm").style.display = "none";
+            document.getElementById("otpSection").style.display = "block";
+        } catch (err) {
+            alert("Email Error: " + (err.text || "Check EmailJS setup"));
+        }
+    }
+
+    async function verifyOTPAndRegister() {
+        const input = document.getElementById("otpInput").value.trim();
+        if(input !== generatedOTP) return alert("Incorrect OTP");
+        
+        const tableName = currentRole === 'faculty' ? 'faculty' : 'students';
+        const { error } = await window.supabaseClient.from(tableName).insert([tempUser]);
+
+        if(error) return alert(error.message);
+        alert("Registration Successful!");
+        backToLogin();
+    }
+
+    // Dashboard Logic
+    function setTodayDate(){ document.getElementById("date").value = new Date().toISOString().split("T")[0]; }
+    
+    async function updateSelectedSubject(){
+        const sub = document.getElementById("subject").value;
+        document.getElementById("subName").innerText = sub;
+        let {data} = await window.supabaseClient.from("attendance").select("date").eq("subject", sub);
+        let unique = [...new Set((data || []).map(r => r.date))];
+        document.getElementById("totalClass").innerText = unique.length;
+    }
+
+    async function loadStudents(){
+        let {data} = await window.supabaseClient.from("students").select("usn,name");
+        const tableBody = document.getElementById("table");
+        tableBody.innerHTML = "";
+        (data || []).forEach(s => {
+            tableBody.innerHTML += `<tr><td>${s.usn}</td><td>${s.name}</td><td><div class="radio-group"><label class="radio present"><input type="radio" name="${s.usn}" value="Present" checked>Present</label><label class="radio absent"><input type="radio" name="${s.usn}" value="Absent">Absent</label></div></td></tr>`;
+        });
+    }
+
+    function markAll(status){ document.querySelectorAll("#table input[type=radio]").forEach(r => { if(r.value === status) r.checked = true; }); }
+
+    async function submitAttendance(){
+        let records = [];
+        const sub = document.getElementById("subject").value;
+        const dt = document.getElementById("date").value;
+        document.querySelectorAll("#table tr").forEach(r => {
+            records.push({ usn: r.children[0].innerText, subject: sub, status: r.querySelector("input:checked").value, date: dt });
+        });
+        await window.supabaseClient.from("attendance").insert(records);
+        alert("Saved Successfully");
+        updateSelectedSubject();
+    }
+
+    async function checkShortage(){
+        facultyDash.style.display = "none"; shortagePage.style.display = "block";
+        const sTable = document.getElementById("shortageTable");
+        sTable.innerHTML = "Loading...";
+        let {data: students} = await window.supabaseClient.from("students").select("usn,name");
+        let {data: attendanceData} = await window.supabaseClient.from("attendance").select("*");
+        sTable.innerHTML = "";
+        students.forEach(s => {
+            let records = attendanceData.filter(a => a.usn === s.usn);
+            let percent = records.length ? (records.filter(r => r.status === "Present").length / records.length) * 100 : 0;
+            sTable.innerHTML += `<tr><td>${s.usn}</td><td>${percent.toFixed(1)}%</td><td class="${percent < 75 ? 'short' : 'safe'}">${percent < 75 ? 'Low' : 'Safe'}</td><td><button class="btn small" onclick="viewRequests('${s.usn}')">View</button></td></tr>`;
+        });
+    }
+
+    async function viewRequests(usn){
+        selectedUSN = usn; requestPage.style.display = "block"; shortagePage.style.display = "none";
+        const rTable = document.getElementById("requestTable");
+        rTable.innerHTML = "Loading...";
+        let {data} = await window.supabaseClient.from("requests").select("*").eq("usn", usn);
+        rTable.innerHTML = "";
+        (data || []).forEach(r => {
+            const isHandled = r.status === 'Accepted' || r.status === 'Rejected';
+            rTable.innerHTML += `<tr><td>${r.usn}</td><td>${r.message}</td><td>${isHandled ? `<b class="${r.status === 'Accepted' ? 'safe' : 'short'}">${r.status}</b>` : `<button class="btn small" style="background:#16a34a" onclick="handleRequest(${r.id}, 'Accepted', '${usn}')">Accept</button><button class="btn small" style="background:#dc2626" onclick="handleRequest(${r.id}, 'Rejected', '${usn}')">Reject</button>`}</td></tr>`;
+        });
+    }
+
+    async function handleRequest(id, action, usn){
+        if(!confirm(`Confirm ${action}?`)) return;
+        await window.supabaseClient.from("requests").update({ status: action }).eq("id", id);
+        viewRequests(usn);
+    }
+
+    function backToShortage(){ requestPage.style.display = "none"; shortagePage.style.display = "block"; }
+    function back(){ shortagePage.style.display = "none"; facultyDash.style.display = "block"; }
+    
+    async function showStudent(usn){ 
+        document.getElementById("stuUSN").innerText = "Welcome, " + usn; 
+        loadStudentAttendance(); 
+        checkRequestStatus(); 
+    }
+
+    async function checkRequestStatus() {
+        let { data } = await window.supabaseClient.from("requests").select("*").eq("usn", currentUSN).order('id', { ascending: false }).limit(1);
+        const notify = document.getElementById("requestNotification");
+        if (data?.length) {
+            const s = data[0].status;
+            notify.innerHTML = `<div class="status-box"><p style="font-size:12px; color:#94a3b8;">Ref: "${data[0].message}"</p><h3 class="${s === 'Accepted' ? 'safe' : (s === 'Rejected' ? 'short' : '')}">Status: ${s}</h3></div>`;
+        }
+    }
+
+    async function loadStudentAttendance(){
+        const sub = document.getElementById("stuSubject").value;
+        const attDisplay = document.getElementById("attendance");
+        let {data} = await window.supabaseClient.from("attendance").select("status").eq("usn", currentUSN).eq("subject", sub);
+        let percent = data?.length ? (data.filter(r => r.status === "Present").length / data.length) * 100 : 0;
+        attDisplay.innerText = percent.toFixed(1) + "%";
+        attDisplay.className = percent < 75 ? "short" : "safe";
+    }
+
+    async function sendRequest(){
+        const m = document.getElementById("msg").value;
+        if(!m) return alert("Enter message");
+        await window.supabaseClient.from("requests").insert([{usn: currentUSN, message: m, status: 'Pending'}]);
+        alert("Sent"); document.getElementById("msg").value = ""; checkRequestStatus();
+    }
+
+    function logout(){ location.reload(); }
+
+    // Expose functions globally
+    window.openLogin = openLogin; window.goBack = goBack; window.login = login;
+    window.showRegister = showRegister; window.sendOTP = sendOTP; window.verifyOTPAndRegister = verifyOTPAndRegister;
+    window.backToLogin = backToLogin; window.logout = logout; window.markAll = markAll;
+    window.submitAttendance = submitAttendance; window.updateSelectedSubject = updateSelectedSubject;
+    window.sendRequest = sendRequest; window.checkShortage = checkShortage; window.viewRequests = viewRequests;
+    window.handleRequest = handleRequest; window.backToShortage = backToShortage; window.back = back;
+    window.loadStudentAttendance = loadStudentAttendance;
+</script>
+</body>
+</html>
